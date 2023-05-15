@@ -9,6 +9,8 @@ const PORT = process.env.PORT
 const DB_URL=process.env.DB_URL
 var bodyParser = require('body-parser')
 
+var cookieParser = require('cookie-parser')
+app.use(cookieParser())
 mongoose.connect(DB_URL).then(()=>{
     console.log("Db Connected...");
 }).catch(err=>{
