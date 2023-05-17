@@ -18,7 +18,12 @@ const userSchema = new mongoose.Schema({
         },
         img : {
             type : String
-        }
+        },
+        Tokens : [{
+            token : {
+                type : String
+            }
+        }]
 
 
 
@@ -27,7 +32,11 @@ const userSchema = new mongoose.Schema({
 userSchema.pre("save",async function(){
     try {
         
-        this.pass  =await bcrypt.hash(this.pass,10)
+        if(this.isModified("pass"))
+        {
+         this.pass  = await bcrypt.hash(this.pass,10)
+       
+        }
     } catch (error) {
         
     }
@@ -37,6 +46,9 @@ userSchema.methods.generateToken =async function(){
 
     try {
         const token = await jwt.sign({_id:this._id},process.env.S_KEY)
+
+        this.Tokens =await this.Tokens.concat({token:token})
+        this.save()
         return token
     } catch (error) {
         

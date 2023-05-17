@@ -4,6 +4,7 @@ const User = require("../model/users")
  const fs  =require("fs")
  const bcrypt = require("bcryptjs")
 const auth = require("../middleware/auth")
+const { log } = require("console")
 
  var storage = multer.diskStorage({    
          destination: function (req, file, cb)
@@ -66,7 +67,7 @@ router.get("/view",auth,async(req,resp)=>{
     
 })
 
-router.get("/delete",async(req,resp)=>{
+router.get("/delete",auth,async(req,resp)=>{
     const did = req.query.did
     try {
         const data = await User.findByIdAndDelete(did);
@@ -77,7 +78,7 @@ router.get("/delete",async(req,resp)=>{
     }
 })
 
-router.get("/edit",async(req,resp)=>{
+router.get("/edit",auth,async(req,resp)=>{
     const eid = req.query.eid
     try {
         const data = await User.findOne({_id:eid})
@@ -111,15 +112,22 @@ router.post("/do_update",upload.single("img"),async(req,resp)=>{
 router.post("/do_login",async(req,resp)=>{
     try {
         
-            const userdata = await User.findOne({email:req.body.email})
+        const userdata = await User.findOne({email:req.body.email})
 
-           const isValid =    await bcrypt.compare(req.body.pass,userdata.pass)
+        if(userdata.Tokens.length>2)
+        {
+            resp.render("login",{err:"Max login limit reached !!!!"})
+            return
+        }
+
+
+        const isValid =    await bcrypt.compare(req.body.pass,userdata.pass)
 
         if(isValid)
         {
 
            const token = await userdata.generateToken()
-           console.log(token);
+        
 
            resp.cookie("jwt",token)
             resp.redirect("view")
@@ -129,17 +137,43 @@ router.post("/do_login",async(req,resp)=>{
         }
 
     } catch (error) {
-        console.log(error);
+       
             resp.render("login",{err:"invalid credentials !!!!"})
     }
 })
 
 
 router.get("/logout",auth,async(req,resp)=>{
-
-
     try {
         
+    const user  =req.user;
+    const token = req.token
+
+    user.Tokens =  user.Tokens.filter(ele=>{
+        return ele.token != token
+    })
+
+    user.save()
+
+        resp.clearCookie("jwt")
+        resp.render("login")
+
+    } catch (error) {
+        
+    }
+})
+
+
+router.get("/logoutall",auth,async(req,resp)=>{
+    try {
+        
+    const user  =req.user;
+    const token = req.token
+
+    user.Tokens =  []
+
+    user.save()
+
         resp.clearCookie("jwt")
         resp.render("login")
 
